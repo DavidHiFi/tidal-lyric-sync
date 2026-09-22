@@ -1,83 +1,77 @@
 # tidal-lyric-sync
 
-A TestCord/Vencord plugin that puts the **current lyric line** from your music into your **Discord custom status**.
+Show the **current lyric line** from TIDAL or Spotify as your **Discord custom status**.
 
-- **TIDAL** via [TidaLuna](https://github.com/Inrixia/TidaLuna) (local websocket `ws://localhost:24123`)
-- **Spotify** via the desktop client (`SPOTIFY_PLAYER_STATE`)
-- Lyrics timed from [LrcLib](https://lrclib.net)
+This repository is a standalone copy of the **LyricsStatus** plugin from [TestcordDev/Testcord](https://github.com/TestcordDev/Testcord), with TIDAL support and reliability fixes applied. Lyrics are fetched from [LRCLIB](https://lrclib.net) and timed against your playback position.
 
-Works with the music controls shipped in [TestCord](https://github.com/TestcordDev/TestCord) (Panel Layout → Music Controls), including shared lyric delay and per-song delay.
+## Features
+
+- Syncs the active lyric line into your Discord custom status
+- Playback sources: **TIDAL** (via TidaLuna / TIDALuna local API) and **Spotify**
+- Template support: `{lyrics}`, `{song}`, `{artist}` (default `🎵 {lyrics}`)
+- Optional status when playback stops: custom message **or** restore your previous status
+- Optional user-area panel toggle button
+- Global + per-song lyric delay (shared with TestCord music controls)
+- Rate-limited status writes with a single retry so Discord does not drop updates
 
 ## Requirements
 
-| Piece | Needed for |
-| --- | --- |
-| [TestCord](https://github.com/TestcordDev/TestCord) (or a compatible Vencord-style client) | Running the plugin |
-| Music Controls / Panel Layout (bundled with TestCord) | TIDAL + Spotify playback state, lyric delay |
-| [TidaLuna](https://github.com/Inrixia/TidaLuna) in the TIDAL desktop app | TIDAL playback → local websocket |
-| Spotify desktop app | Spotify playback events |
-| Network access to `lrclib.net` | Fetching synced lyrics |
+- A Discord client mod that loads TestCord plugins ([Testcord](https://github.com/TestcordDev/Testcord))
+- For TIDAL: [TidaLuna](https://github.com/Inrixia/TidaLuna) installed in the TIDAL desktop app (local WebSocket `ws://localhost:24123`, configurable in music controls settings)
+- For Spotify: Spotify desktop player with the usual client-mod Spotify integration
+- Network access to `https://lrclib.net` for synced lyrics
 
-Without TidaLuna, select **Spotify** as the source (or run without lyrics until playback is available).
+## Installation
 
-## Install
+Copy the plugin folder into your TestCord checkout so the path matches:
 
-1. Clone this repository next to your TestCord checkout (or copy the plugin folder in).
-2. Ensure the plugin lands at `src/testcordplugins/lyricsStatus/index.tsx` inside TestCord:
-
-   ```text
-   TestCord/
-     src/
-       testcordplugins/
-         lyricsStatus/
-           index.tsx   ← this file
-   ```
-
-   If you already have a `lyricsStatus` folder, back it up before replacing it.
-
-3. Build TestCord as usual (`pnpm build` from the TestCord root).
-4. Restart Discord fully (quit the process, then open it again). Reloading the window alone is not enough for a rebuilt renderer on some injectors.
-5. Enable **LyricsStatus** in TestCord plugin settings.
-
-### Using this repo as a git remote for the plugin only
-
-```bash
-# inside TestCord
-git remote add tidal-lyric-sync /path/to/tidal-lyric-sync
-git fetch tidal-lyric-sync
-git checkout tidal-lyric-sync/main -- src/testcordplugins/lyricsStatus
+```text
+<src>/testcordplugins/lyricsStatus/index.tsx
 ```
 
-## Settings
+Example for a standard TestCord tree:
 
-| Setting | What it does |
+```bash
+git clone https://github.com/DavidHiFi/tidal-lyric-sync.git
+cp -r tidal-lyric-sync/src/lyricsStatus <TestCord>/src/testcordplugins/lyricsStatus
+```
+
+Then rebuild / reinstall your client mod as usual (for TestCord: `pnpm build` and inject, or use your existing dev workflow).
+
+After a rebuild, **fully restart Discord** (quit the process, then start it again). A simple `Ctrl+R` reload can keep serving a cached renderer and will not pick up the new plugin code.
+
+## Usage
+
+1. Open **TestCord → Plugins → LyricsStatus**.
+2. Set **Source** to `TIDAL via TIDALuna` or `Spotify`.
+3. Optionally edit **Format**, stop behaviour, and the panel button.
+4. Play a track — the lyric line appears as your custom status while it plays.
+
+### Settings
+
+| Setting | Description |
 | --- | --- |
-| **Source** | `TIDAL via TIDALuna` (default) or `Spotify` |
-| **Format** | Status template: `{lyrics}`, `{song}`, `{artist}` — default `🎵 {lyrics}` |
-| **Custom message on stop** | Text written when music stops or the plugin disables |
-| **Restore status on stop** | Put back the custom status you had before playback |
-| **Show panel button** | Toggle button in the user area panel |
-
-There is also a toggle button in the user panel (music-note icon) for enable/disable without opening settings.
+| Format | Status template. `{lyrics}` = current line, `{song}` = track, `{artist}` = artist |
+| Source | `TIDAL via TIDALuna` or `Spotify` |
+| Custom message on stop | Write a fixed status when music stops or the plugin is disabled |
+| Custom message | Text used by the option above (blank clears the status) |
+| Restore status on stop | Put back the custom status from before music started |
+| Show panel button | Toggle the music-note button in the user area panel |
 
 ## How it works
 
-1. Subscribes to TIDAL (TidaLuna store) or Spotify player state.
-2. Fetches synced LRC lyrics from LrcLib for the current track (cached per track id).
-3. Every 2s, picks the line matching playback position + lyric delay.
-4. Writes your Discord custom status (rate-limited, with one retry) until playback stops.
+1. Subscribe to playback state (TIDAL store or Spotify player events).
+2. Fetch synced lyrics for the current track from LRCLIB (cached per track id).
+3. On a short timer, pick the line matching `position + lyric delay`.
+4. Write that text into your Discord custom status setting, rate-limited and retried once on failure.
 
-## Repository layout
+## Credits
 
-```text
-src/lyricsStatus/index.tsx   Plugin source (copy to TestCord path above)
-LICENSE                      GPL-3.0-or-later
-```
+- Original **LyricsStatus** plugin by **Sharp** and **x2b** in [TestcordDev/Testcord](https://github.com/TestcordDev/Testcord)
+- TestCord / Vencord / Equicord ecosystem
+- [LRCLIB](https://lrclib.net) for public synced lyrics
+- [TidaLuna](https://github.com/Inrixia/TidaLuna) for the local TIDAL control API
 
-## Credits & license
+## License
 
-- Upstream plugin: TestCord `lyricsStatus` (TestcordDev/TestCord contributors, including Sharp and x2b).
-- TIDAL integration and status reliability fixes layered on top for local use.
-- Licensed under [GPL-3.0-or-later](./LICENSE), same as TestCord/Vencord.
-
-Not affiliated with Discord, TIDAL, or Spotify.
+[GPL-3.0-or-later](LICENSE) — same license as the upstream TestCord source.
