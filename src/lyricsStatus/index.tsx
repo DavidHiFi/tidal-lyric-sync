@@ -480,7 +480,10 @@ export default definePlugin({
     name: "LyricsStatus",
     description: "Shows the current TIDAL or Spotify lyric line in your Discord custom status. Lyrics are fetched from LrcLib.",
     tags: ["Activity", "Utility"],
-    authors: [{ name: "Sharp", id: 0n }],
+    authors: [
+        { name: "Sharp", id: 0n },
+        { name: "DavidHiFi", id: 0n },
+    ],
     settings,
     dependencies: ["UserSettingsAPI"],
 
